@@ -70,4 +70,4 @@ const updateUserProfile = async (req, res) => {
     }
 };
 
-module.exports = { registerUser, loginUser, updateUserProfile, getProfile };
+module.exports = { registerUser, loginUser, updateUserProfile, getProfile };4
