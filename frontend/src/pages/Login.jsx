@@ -15,7 +15,8 @@ const Login = () => {
       login(response.data);
       navigate('/tasks');
     } catch (error) {
-      alert('Login failed. Please try again.');
+      console.error(error.response?.data || error.message);
+      alert(error.response?.data?.message || 'Login failed. Please try again.');
     }
   };
 

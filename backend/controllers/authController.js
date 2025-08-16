@@ -25,49 +25,66 @@ const loginUser = async (req, res) => {
     try {
         const user = await User.findOne({ email });
         if (user && (await bcrypt.compare(password, user.password))) {
-            res.json({ id: user.id, name: user.name, email: user.email, token: generateToken(user.id) });
+            res.json({ 
+                id: user.id, 
+                name: user.name, 
+                email: user.email, 
+                token: generateToken(user.id) 
+            });
         } else {
             res.status(401).json({ message: 'Invalid email or password' });
         }
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
-};
+};;
 
 const getProfile = async (req, res) => {
     try {
-      const user = await User.findById(req.user.id);
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-  
-      res.status(200).json({
-        name: user.name,
-        email: user.email,
-        university: user.university,
-        address: user.address,
-      });
-    } catch (error) {
-      res.status(500).json({ message: 'Server error', error: error.message });
-    }
-  };
-
-const updateUserProfile = async (req, res) => {
-    try {
         const user = await User.findById(req.user.id);
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
 
-        const { name, email, university, address } = req.body;
-        user.name = name || user.name;
-        user.email = email || user.email;
-        user.university = university || user.university;
-        user.address = address || user.address;
-
-        const updatedUser = await user.save();
-        res.json({ id: updatedUser.id, name: updatedUser.name, email: updatedUser.email, university: updatedUser.university, address: updatedUser.address, token: generateToken(updatedUser.id) });
+        res.status(200).json({
+            name: user.name,
+            email: user.email,
+            phoneNumer: user.phoneNumer,
+            address: user.address,
+        });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: 'Server error', error: error.message });
     }
 };
 
-module.exports = { registerUser, loginUser, updateUserProfile, getProfile };4
+
+const updateProfile = async (req, res) => {
+  try {
+    const { name, email, phoneNumer, address } = req.body;
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Update fields only if they are provided
+    user.name = name || user.name;
+    user.email = email || user.email;
+    user.phoneNumer = phoneNumer || user.phoneNumer;
+    user.address = address || user.address;
+
+    const updatedUser = await user.save();
+
+    res.json({
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      phoneNumer: updatedUser.phoneNumer,
+      address: updatedUser.address,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { registerUser, loginUser, getProfile, updateProfile };
