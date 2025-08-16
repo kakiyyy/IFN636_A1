@@ -26,6 +26,6 @@
     "nodemon": "^2.0.15",
     "sinon": "^19.0.5"
   },
-  "author": "Anant Srivastava, n12138177",
+  "author": "Task Manager Team",
   "license": "ISC"
 }
