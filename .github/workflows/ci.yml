@@ -3,8 +3,7 @@ name: Backend CI
 on:
   push:
     branches:
-      - main  # Trigger CI on pushes to the main branch
-
+      - main
 
 jobs:
   test:
@@ -13,8 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [22] # Test on multiple Node.js versions
-
+        node-version: [22]
 
     environment: MONGO_URI
 
@@ -22,14 +20,12 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v3
 
-    # Set up Node.js
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
 
     - name: Print Env Secret
-
       env:
         MONGO_URI: ${{ secrets.MONGO_URI }}
         JWT_SECRET: ${{ secrets.JWT_SECRET }}
@@ -41,40 +37,23 @@ jobs:
       
     - run: pm2 stop all
 
-    # Install dependencies for backend
-    - name: Install Backend Dependencies
-      working-directory: ./backend
+    - name: Install Dependencies
       run: | 
-       npm install --global yarn
-       yarn --version
-       yarn install
-      
-    # Install dependencies for frontend
-    - name: Install Frontend Dependencies
-      working-directory: ./frontend
-      run: |
-        df -h
-        sudo rm -rf ./build
+        npm install --global yarn
+        yarn --version
         yarn install
-        yarn run build
 
-
-    # Run backend tests
-    - name: Run Backend Tests
+    - name: Run Tests
       env:
         MONGO_URI: ${{ secrets.MONGO_URI }}
         JWT_SECRET: ${{ secrets.JWT_SECRET }}
         PORT: ${{ secrets.PORT }}
-      working-directory: ./backend
       run: npm test
 
-
-    - run: npm ci
-    - run: | 
-        cd ./backend
+    - name: Setup Environment
+      run: | 
         touch .env
         echo "${{ secrets.PROD }}" > .env
 
     - run: pm2 start all
-
     - run: pm2 restart all
