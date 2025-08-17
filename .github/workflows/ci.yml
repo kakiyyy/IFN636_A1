@@ -2,58 +2,68 @@ name: Backend CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
   test:
-    name: Run Tests
-    runs-on: self-hosted
-
+    name: Run Backend Tests
+    runs-on: ubuntu-latest   # use hosted for reproducible CI; keep self-hosted if you must
     strategy:
       matrix:
         node-version: [22]
 
-    environment: MONGO_URI
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install deps (backend)
+        working-directory: ./backend
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      # If your Mocha script is: "mocha \"test/**/*.{test,spec}.js\" --exit"
+      - name: Run tests (backend)
+        working-directory: ./backend
+        env:
+          NODE_ENV: test
+        run: npm test
+
+  deploy:
+    name: Deploy with PM2
+    runs-on: self-hosted
+    needs: test
+    concurrency:
+      group: backend-deploy
+      cancel-in-progress: true
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: ${{ matrix.node-version }}
+      - name: Write .env for backend (no echo of secrets)
+        working-directory: ./backend
+        run: |
+          {
+            echo "NODE_ENV=production"
+            echo "PORT=${{ secrets.PORT }}"
+            echo "MONGO_URI=${{ secrets.MONGO_URI }}"
+            echo "JWT_SECRET=${{ secrets.JWT_SECRET }}"
+          } > .env
 
-    - name: Print Env Secret
-      env:
-        MONGO_URI: ${{ secrets.MONGO_URI }}
-        JWT_SECRET: ${{ secrets.JWT_SECRET }}
-        PORT: ${{ secrets.PORT }}
-      run: | 
-        echo "Secret 1 is: $MONGO_URI"
-        echo "Secret 2 is: $JWT_SECRET"
-        echo "Secret 3 is: $PORT"
-      
-    - run: pm2 stop all
-
-    - name: Install Dependencies
-      run: | 
-        npm install --global yarn
-        yarn --version
-        yarn install
-
-    - name: Run Tests
-      env:
-        MONGO_URI: ${{ secrets.MONGO_URI }}
-        JWT_SECRET: ${{ secrets.JWT_SECRET }}
-        PORT: ${{ secrets.PORT }}
-      run: npm test
-
-    - name: Setup Environment
-      run: | 
-        touch .env
-        echo "${{ secrets.PROD }}" > .env
-
-    - run: pm2 start all
-    - run: pm2 restart all
+      # Adjust to your PM2 setup (ecosystem file recommended)
+      - name: Reload PM2 app
+        run: |
+          pm2 describe backend >/dev/null 2>&1 && pm2 reload backend --update-env || pm2 start ecosystem.config.js --only backend
+          pm2 save
+          pm2 status
